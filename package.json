@@ -1,0 +1,25 @@
+{
+  "name": "blockproxy-root",
+  "version": "1.0.0",
+  "description": "BlockProxy - Blockchain-Based Secure Proxy Voting and Corporate Governance Platform",
+  "private": true,
+  "scripts": {
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "build:client": "npm run build --prefix client",
+    "prisma:generate": "npm run prisma:generate --prefix server",
+    "prisma:migrate": "npm run prisma:migrate --prefix server",
+    "prisma:seed": "npm run prisma:seed --prefix server"
+  },
+  "keywords": [
+    "blockchain",
+    "corporate-governance",
+    "proxy-voting",
+    "react",
+    "nodejs",
+    "prisma",
+    "solidity"
+  ],
+  "author": "Ayush Sharma",
+  "license": "MIT"
+}
