@@ -57,4 +57,3 @@ services:
           type: web
           name: blockproxy-api
           property: host
-          path: /api

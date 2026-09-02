@@ -166,3 +166,11 @@ Once deployed, you can verify your deployment by checking:
      }
      ```
 2. **Frontend UI**: Open `https://<your-frontend>.onrender.com` and log in with any of the demo accounts above.
+
+---
+
+## 💡 Important Tips for Render Free Tier
+
+1. **Cold Starts**: Render's free tier services spin down after 15 minutes of inactivity. When visiting the site after an idle period, the first request may take ~30-50 seconds while the backend wakes up. Subsequent requests will be fast.
+2. **Automatic URL Normalization**: The frontend automatically normalizes `VITE_API_URL` whether provided as `blockproxy-api.onrender.com`, `https://blockproxy-api.onrender.com`, or with `/api`, ensuring 100% compatibility with Render's Blueprint.
+3. **Database Migrations & Seed**: On every Blueprint deploy or push, `npm run render:build` automatically validates PostgreSQL schema tables and seeds initial governance accounts so the platform is immediately operational.

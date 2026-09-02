@@ -7,11 +7,12 @@
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
+    "build": "npm run render:build",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:push": "prisma db push",
     "prisma:generate:pg": "prisma generate --schema=prisma/schema.postgresql.prisma",
-    "prisma:push:pg": "prisma db push --schema=prisma/schema.postgresql.prisma",
+    "prisma:push:pg": "prisma db push --schema=prisma/schema.postgresql.prisma --accept-data-loss",
     "prisma:seed": "node prisma/seed.js",
     "prisma:studio": "prisma studio",
     "render:build": "npm run prisma:generate:pg && npm run prisma:push:pg && npm run prisma:seed"

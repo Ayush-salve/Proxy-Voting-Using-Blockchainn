@@ -1,3 +1,42 @@
-﻿**/node_modules/
+# Dependencies
+**/node_modules/
+.pnp
+.pnp.js
+
+# Production / Build Output
 **/dist/
+**/build/
+
+# Environment Variables
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+server/.env
+client/.env.local
+
+# Local SQLite Database Files
+*.db
+*.db-journal
+server/prisma/dev.db
+server/prisma/dev.db-journal
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+
+# OS & Editor Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Stray execution scripts
+powershell.cmd
+powershell.bat
+console.error(e))

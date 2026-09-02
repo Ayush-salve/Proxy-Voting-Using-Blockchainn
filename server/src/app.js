@@ -35,31 +35,41 @@ app.use(
 );
 
 // 2. CORS
+const normalizedClientUrl = CLIENT_URL.startsWith('http') ? CLIENT_URL : `https://${CLIENT_URL}`;
 const allowedOrigins = [
   CLIENT_URL,
   CLIENT_URL?.replace(/\/$/, ''),
+  normalizedClientUrl,
+  normalizedClientUrl.replace(/\/$/, ''),
   'http://localhost:5173',
   'http://127.0.0.1:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
 ].filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
       if (!origin) return callback(null, true);
+      const cleanOrigin = origin.replace(/\/$/, '');
       if (
-        allowedOrigins.includes(origin) ||
-        origin.endsWith('.onrender.com') ||
+        allowedOrigins.some((o) => o.replace(/\/$/, '') === cleanOrigin) ||
+        cleanOrigin.endsWith('.onrender.com') ||
+        cleanOrigin.includes('localhost') ||
+        cleanOrigin.includes('127.0.0.1') ||
         process.env.NODE_ENV !== 'production'
       ) {
         return callback(null, true);
       }
-      return callback(null, true);
+      return callback(null, true); // Permissive fallback for production deployment flexibility
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   })
 );
+app.options('*', cors());
 
 // 3. Logger
 if (process.env.NODE_ENV === 'development') {

@@ -1,6 +1,33 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+/**
+ * Format and normalize the API Base URL to handle all deployment environments:
+ * - Bare hostnames from Render blueprints: "blockproxy-api.onrender.com" -> "https://blockproxy-api.onrender.com/api"
+ * - Full URLs without /api: "https://blockproxy-api.onrender.com" -> "https://blockproxy-api.onrender.com/api"
+ * - Full URLs with /api: "https://blockproxy-api.onrender.com/api" -> "https://blockproxy-api.onrender.com/api"
+ * - Local development: "http://localhost:5000/api" -> "http://localhost:5000/api"
+ */
+const formatApiUrl = (url) => {
+  if (!url || typeof url !== 'string') return 'http://localhost:5000/api';
+  let formatted = url.trim();
+
+  // If no protocol is provided and it is not a relative path, default to https://
+  if (!formatted.startsWith('http://') && !formatted.startsWith('https://') && !formatted.startsWith('/')) {
+    formatted = `https://${formatted}`;
+  }
+
+  // Remove trailing slashes
+  formatted = formatted.replace(/\/+$/, '');
+
+  // Append /api if not already present
+  if (!formatted.endsWith('/api')) {
+    formatted = `${formatted}/api`;
+  }
+
+  return formatted;
+};
+
+const API_BASE_URL = formatApiUrl(import.meta.env.VITE_API_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
