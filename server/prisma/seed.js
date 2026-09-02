@@ -26,7 +26,13 @@ async function main() {
   const adminPassword = await bcrypt.hash('Admin@12345', salt);
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@blockproxy.com' },
-    update: {},
+    update: {
+      passwordHash: adminPassword,
+      role: 'COMPANY_ADMIN',
+      isActive: true,
+      approvalStatus: 'APPROVED',
+      fullName: 'Vikram Malhotra (Company Secretary)',
+    },
     create: {
       email: 'admin@blockproxy.com',
       passwordHash: adminPassword,
@@ -34,6 +40,7 @@ async function main() {
       role: 'COMPANY_ADMIN',
       walletAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
       isActive: true,
+      approvalStatus: 'APPROVED',
     },
   });
 
@@ -41,7 +48,13 @@ async function main() {
   const auditorPassword = await bcrypt.hash('Auditor@12345', salt);
   const auditorUser = await prisma.user.upsert({
     where: { email: 'auditor@blockproxy.com' },
-    update: {},
+    update: {
+      passwordHash: auditorPassword,
+      role: 'AUDITOR',
+      isActive: true,
+      approvalStatus: 'APPROVED',
+      fullName: 'PwC Corporate Governance Assurance',
+    },
     create: {
       email: 'auditor@blockproxy.com',
       passwordHash: auditorPassword,
@@ -49,6 +62,7 @@ async function main() {
       role: 'AUDITOR',
       walletAddress: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
       isActive: true,
+      approvalStatus: 'APPROVED',
     },
   });
 
@@ -56,7 +70,13 @@ async function main() {
   const proxyPassword = await bcrypt.hash('Proxy@12345', salt);
   const proxyUser = await prisma.user.upsert({
     where: { email: 'rahul@blockproxy.com' },
-    update: {},
+    update: {
+      passwordHash: proxyPassword,
+      role: 'PROXY_REPRESENTATIVE',
+      isActive: true,
+      approvalStatus: 'APPROVED',
+      fullName: 'Rahul Verma (Proxy Advisory Counsel)',
+    },
     create: {
       email: 'rahul@blockproxy.com',
       passwordHash: proxyPassword,
@@ -64,6 +84,7 @@ async function main() {
       role: 'PROXY_REPRESENTATIVE',
       walletAddress: '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
       isActive: true,
+      approvalStatus: 'APPROVED',
     },
   });
 
@@ -71,7 +92,13 @@ async function main() {
   const shareholder1Password = await bcrypt.hash('Shareholder@12345', salt);
   const shareholder1User = await prisma.user.upsert({
     where: { email: 'ayush@blockproxy.com' },
-    update: {},
+    update: {
+      passwordHash: shareholder1Password,
+      role: 'SHAREHOLDER',
+      isActive: true,
+      approvalStatus: 'APPROVED',
+      fullName: 'Ayush Sharma',
+    },
     create: {
       email: 'ayush@blockproxy.com',
       passwordHash: shareholder1Password,
@@ -79,12 +106,18 @@ async function main() {
       role: 'SHAREHOLDER',
       walletAddress: '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
       isActive: true,
+      approvalStatus: 'APPROVED',
     },
   });
 
   const shareholder1 = await prisma.shareholder.upsert({
     where: { userId: shareholder1User.id },
-    update: {},
+    update: {
+      totalShares: BigInt(2500),
+      votingPower: BigInt(2500),
+      delegatedPowerOut: BigInt(0),
+      status: 'ACTIVE',
+    },
     create: {
       userId: shareholder1User.id,
       companyId: company.id,
@@ -100,7 +133,13 @@ async function main() {
   const shareholder2Password = await bcrypt.hash('Shareholder@12345', salt);
   const shareholder2User = await prisma.user.upsert({
     where: { email: 'sarah@blockproxy.com' },
-    update: {},
+    update: {
+      passwordHash: shareholder2Password,
+      role: 'SHAREHOLDER',
+      isActive: true,
+      approvalStatus: 'APPROVED',
+      fullName: 'Sarah Jenkins',
+    },
     create: {
       email: 'sarah@blockproxy.com',
       passwordHash: shareholder2Password,
@@ -108,12 +147,18 @@ async function main() {
       role: 'SHAREHOLDER',
       walletAddress: '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
       isActive: true,
+      approvalStatus: 'APPROVED',
     },
   });
 
   const shareholder2 = await prisma.shareholder.upsert({
     where: { userId: shareholder2User.id },
-    update: {},
+    update: {
+      totalShares: BigInt(5000),
+      votingPower: BigInt(5000),
+      delegatedPowerOut: BigInt(1000),
+      status: 'ACTIVE',
+    },
     create: {
       userId: shareholder2User.id,
       companyId: company.id,

@@ -60,7 +60,15 @@ export const RegisterPage = () => {
         navigate('/admin/dashboard');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed. Please check inputs.');
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else if (!err.response) {
+        setError(
+          'Server Connection Notice: Unable to reach backend API. If the server is waking up from sleep on Render, please wait ~30 seconds and try again.'
+        );
+      } else {
+        setError('Registration failed. Please check inputs and try again.');
+      }
     } finally {
       setLoading(false);
     }

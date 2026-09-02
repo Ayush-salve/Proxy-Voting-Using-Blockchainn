@@ -63,7 +63,16 @@ export const LoginPage = () => {
       if (err.response?.data?.code === 'REGISTRATION_PENDING_APPROVAL') {
         setIsPending(true);
       }
-      setError(err.response?.data?.message || 'Authentication failed. Please check credentials.');
+      
+      if (err.response?.data?.message) {
+        setError(err.response.data.message);
+      } else if (!err.response) {
+        setError(
+          'Server Connection Notice: Unable to reach backend API. If you recently deployed on Render free tier, the backend server may take ~30-45 seconds to wake up from cold sleep. Please wait a moment and try again.'
+        );
+      } else {
+        setError('Authentication failed. Please check your credentials and try again.');
+      }
     } finally {
       setLoading(false);
     }
