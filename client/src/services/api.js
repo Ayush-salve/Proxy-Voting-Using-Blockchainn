@@ -7,8 +7,8 @@ import axios from 'axios';
  * - Full URLs with /api: "https://blockproxy-api.onrender.com/api" -> "https://blockproxy-api.onrender.com/api"
  * - Local development: "http://localhost:5000/api" -> "http://localhost:5000/api"
  */
-const formatApiUrl = (url) => {
-  if (!url || typeof url !== 'string') return 'http://localhost:5000/api';
+export const formatApiUrl = (url) => {
+  if (!url || typeof url !== 'string' || !url.trim()) return 'http://localhost:5000/api';
   let formatted = url.trim();
 
   // If no protocol is provided and it is not a relative path, default to https://
@@ -27,18 +27,43 @@ const formatApiUrl = (url) => {
   return formatted;
 };
 
-const API_BASE_URL = formatApiUrl(import.meta.env.VITE_API_URL);
+export const getApiBaseUrl = () => {
+  const customUrl = typeof window !== 'undefined' ? localStorage.getItem('blockproxy_custom_api_url') : null;
+  const envUrl = import.meta.env.VITE_API_URL;
+  return formatApiUrl(customUrl || envUrl);
+};
+
+export const setCustomApiUrl = (url) => {
+  if (!url) {
+    localStorage.removeItem('blockproxy_custom_api_url');
+  } else {
+    localStorage.setItem('blockproxy_custom_api_url', formatApiUrl(url));
+  }
+};
+
+export const resetCustomApiUrl = () => {
+  localStorage.removeItem('blockproxy_custom_api_url');
+};
+
+export const pingBackendHealth = async (customUrl = null) => {
+  const targetBaseUrl = customUrl ? formatApiUrl(customUrl) : getApiBaseUrl();
+  const healthUrl = `${targetBaseUrl}/health`;
+  const response = await axios.get(healthUrl, { timeout: 15000 });
+  return response.data;
+};
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: getApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000,
 });
 
-// Request Interceptor: Attach Access Token to all outgoing API requests
+// Request Interceptor: Attach Access Token and dynamic Base URL
 api.interceptors.request.use(
   (config) => {
+    config.baseURL = getApiBaseUrl();
     const token = localStorage.getItem('blockproxy_access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -66,7 +91,8 @@ api.interceptors.response.use(
 
       if (refreshToken) {
         try {
-          const res = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
+          const currentBase = getApiBaseUrl();
+          const res = await axios.post(`${currentBase}/auth/refresh`, { refreshToken });
           const newAccessToken = res.data.data.accessToken;
 
           localStorage.setItem('blockproxy_access_token', newAccessToken);

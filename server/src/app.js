@@ -56,6 +56,7 @@ app.use(
       if (
         allowedOrigins.some((o) => o.replace(/\/$/, '') === cleanOrigin) ||
         cleanOrigin.endsWith('.onrender.com') ||
+        cleanOrigin.endsWith('.netlify.app') ||
         cleanOrigin.includes('localhost') ||
         cleanOrigin.includes('127.0.0.1') ||
         process.env.NODE_ENV !== 'production'

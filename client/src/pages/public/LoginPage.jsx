@@ -14,6 +14,7 @@ import {
   Building,
   User,
 } from 'lucide-react';
+import { ServerConnectionHelper } from '../../components/common/ServerConnectionHelper';
 
 export const LoginPage = () => {
   const [role, setRole] = useState('SHAREHOLDER');
@@ -22,6 +23,7 @@ export const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isPending, setIsPending] = useState(false);
+  const [isConnectionError, setIsConnectionError] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -33,6 +35,7 @@ export const LoginPage = () => {
     e.preventDefault();
     setError('');
     setIsPending(false);
+    setIsConnectionError(false);
     setLoading(true);
 
     try {
@@ -67,6 +70,7 @@ export const LoginPage = () => {
       if (err.response?.data?.message) {
         setError(err.response.data.message);
       } else if (!err.response) {
+        setIsConnectionError(true);
         setError(
           'Server Connection Notice: Unable to reach backend API. If you recently deployed on Render free tier, the backend server may take ~30-45 seconds to wake up from cold sleep. Please wait a moment and try again.'
         );
@@ -84,6 +88,7 @@ export const LoginPage = () => {
     setRole(demoRole);
     setError('');
     setIsPending(false);
+    setIsConnectionError(false);
   };
 
   return (
@@ -127,6 +132,15 @@ export const LoginPage = () => {
               )}
               <span>{error}</span>
             </div>
+          )}
+
+          {isConnectionError && (
+            <ServerConnectionHelper
+              onServerAwake={() => {
+                setError('');
+                setIsConnectionError(false);
+              }}
+            />
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">

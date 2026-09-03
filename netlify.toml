@@ -1,0 +1,27 @@
+# Netlify Configuration for BlockProxy Monorepo
+
+[build]
+  # Base directory where frontend code lives
+  base = "client"
+  # Command to build Vite frontend
+  command = "npm run build"
+  # Directory to publish relative to base
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA Fallback: Route all incoming requests to index.html for React Router
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Security & Best-Practice Headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

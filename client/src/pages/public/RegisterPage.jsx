@@ -16,6 +16,7 @@ import {
   Building,
   Clock,
 } from 'lucide-react';
+import { ServerConnectionHelper } from '../../components/common/ServerConnectionHelper';
 
 export const RegisterPage = () => {
   const [fullName, setFullName] = useState('');
@@ -24,6 +25,7 @@ export const RegisterPage = () => {
   const [role, setRole] = useState('SHAREHOLDER');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isConnectionError, setIsConnectionError] = useState(false);
   const [approvalResult, setApprovalResult] = useState(null);
 
   const { register } = useAuth();
@@ -35,6 +37,7 @@ export const RegisterPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsConnectionError(false);
     setApprovalResult(null);
     setLoading(true);
 
@@ -63,6 +66,7 @@ export const RegisterPage = () => {
       if (err.response?.data?.message) {
         setError(err.response.data.message);
       } else if (!err.response) {
+        setIsConnectionError(true);
         setError(
           'Server Connection Notice: Unable to reach backend API. If the server is waking up from sleep on Render, please wait ~30 seconds and try again.'
         );
@@ -105,6 +109,15 @@ export const RegisterPage = () => {
               <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
+          )}
+
+          {isConnectionError && (
+            <ServerConnectionHelper
+              onServerAwake={() => {
+                setError('');
+                setIsConnectionError(false);
+              }}
+            />
           )}
 
           {/* Success / Pending Approval Card */}
