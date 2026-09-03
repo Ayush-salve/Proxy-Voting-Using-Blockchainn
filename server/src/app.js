@@ -94,8 +94,8 @@ const generalLimiter = rateLimit({
 });
 app.use('/api', generalLimiter);
 
-// 6. Health Route
-app.get('/api/health', (req, res) => {
+// 6. Health & Status Routes
+app.get(['/', '/health', '/api/health'], (req, res) => {
   res.status(200).json({
     success: true,
     status: 'ONLINE',
