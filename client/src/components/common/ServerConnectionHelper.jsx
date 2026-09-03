@@ -1,50 +1,83 @@
-import React, { useState } from 'react';
-import { RefreshCw, Server, CheckCircle2, AlertTriangle, ExternalLink, Settings, Wrench } from 'lucide-react';
-import { getApiBaseUrl, setCustomApiUrl, resetCustomApiUrl, pingBackendHealth } from '../../services/api';
+import React, { useState, useEffect, useRef } from 'react';
+import { RefreshCw, Server, CheckCircle2, AlertTriangle, Settings, Sparkles, ExternalLink } from 'lucide-react';
+import { getApiBaseUrl, setCustomApiUrl, resetCustomApiUrl, pingBackendHealth, formatApiUrl } from '../../services/api';
 
 export const ServerConnectionHelper = ({ onServerAwake }) => {
   const [currentUrl, setCurrentUrl] = useState(getApiBaseUrl());
   const [customInput, setCustomInput] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isPinging, setIsPinging] = useState(false);
-  const [pingStatus, setPingStatus] = useState(null); // 'SUCCESS', 'FAILED', null
+  const [pingStatus, setPingStatus] = useState(null); // 'SUCCESS', 'FAILED', 'WAKING', null
   const [pingMessage, setPingMessage] = useState('');
+  const [attemptCount, setAttemptCount] = useState(0);
 
-  const handlePing = async (urlToTest = null) => {
+  const retryTimeoutRef = useRef(null);
+  const isCancelledRef = useRef(false);
+
+  useEffect(() => {
+    // Keep URL synced with current calculated API base URL
+    setCurrentUrl(getApiBaseUrl());
+
+    return () => {
+      isCancelledRef.current = true;
+      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+    };
+  }, []);
+
+  const handlePing = async (urlToTest = null, maxAttempts = 12) => {
+    isCancelledRef.current = false;
     setIsPinging(true);
-    setPingStatus(null);
-    setPingMessage('Attempting to connect to backend server... (Render cold-start takes ~30-45s)');
+    setPingStatus('WAKING');
+    let attempt = 1;
 
-    try {
-      const res = await pingBackendHealth(urlToTest);
-      if (res && (res.success || res.status === 'ONLINE')) {
-        setPingStatus('SUCCESS');
-        setPingMessage(`Server is ONLINE (${res.platform || 'BlockProxy API'})`);
-        if (onServerAwake) onServerAwake();
-      } else {
-        setPingStatus('SUCCESS');
-        setPingMessage('Server responded successfully!');
-        if (onServerAwake) onServerAwake();
-      }
-    } catch (err) {
-      setPingStatus('FAILED');
+    const targetUrl = urlToTest ? formatApiUrl(urlToTest) : getApiBaseUrl();
+    setCurrentUrl(targetUrl);
+
+    const executePing = async () => {
+      if (isCancelledRef.current) return;
+      setAttemptCount(attempt);
       setPingMessage(
-        err.response?.status
-          ? `Server returned HTTP ${err.response.status}`
-          : 'Unable to reach backend. The server is still booting or URL is incorrect.'
+        `Pinging server (Attempt ${attempt}/${maxAttempts})... Render cold start takes ~30-45s.`
       );
-    } finally {
-      setIsPinging(false);
-    }
+
+      try {
+        const res = await pingBackendHealth(targetUrl);
+        if (res && (res.success || res.status === 'ONLINE')) {
+          setPingStatus('SUCCESS');
+          setPingMessage(`Server is ONLINE & Ready! (${res.platform || 'BlockProxy API'})`);
+          setIsPinging(false);
+          if (onServerAwake) onServerAwake();
+          return;
+        }
+      } catch (err) {
+        if (isCancelledRef.current) return;
+
+        if (attempt < maxAttempts) {
+          attempt += 1;
+          retryTimeoutRef.current = setTimeout(executePing, 4000);
+        } else {
+          setIsPinging(false);
+          setPingStatus('FAILED');
+          setPingMessage(
+            err.response?.status
+              ? `Server responded with HTTP ${err.response.status}`
+              : `Unable to reach ${targetUrl}. Please verify the backend URL is active on Render.`
+          );
+        }
+      }
+    };
+
+    executePing();
   };
 
-  const handleSaveCustomUrl = async () => {
-    if (!customInput.trim()) return;
-    setCustomApiUrl(customInput.trim());
-    const updated = getApiBaseUrl();
-    setCurrentUrl(updated);
+  const handleSaveCustomUrl = async (urlOverride = null) => {
+    const rawVal = urlOverride || customInput;
+    if (!rawVal || !rawVal.trim()) return;
+    const formatted = formatApiUrl(rawVal.trim());
+    setCustomApiUrl(formatted);
+    setCurrentUrl(formatted);
     setIsEditing(false);
-    handlePing(updated);
+    handlePing(formatted);
   };
 
   const handleResetUrl = () => {
@@ -56,8 +89,14 @@ export const ServerConnectionHelper = ({ onServerAwake }) => {
     handlePing(updated);
   };
 
+  // Check if current target URL might be missing onrender.com
+  const isMissingOnRender = !currentUrl.includes('.') && !currentUrl.includes('localhost');
+  const suggestedOnRenderUrl = isMissingOnRender
+    ? currentUrl.replace('/api', '').replace(/^https?:\/\//, '') + '.onrender.com'
+    : null;
+
   return (
-    <div className="mt-4 p-4 rounded-xl bg-slate-900/90 border border-amber-500/40 text-xs shadow-lg space-y-3 animate-fadeIn">
+    <div className="mt-4 p-4 rounded-xl bg-slate-900/95 border border-amber-500/40 text-xs shadow-xl space-y-3 animate-fadeIn backdrop-blur-md">
       {/* Header */}
       <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
         <div className="flex items-center gap-2 text-amber-400 font-semibold">
@@ -66,8 +105,11 @@ export const ServerConnectionHelper = ({ onServerAwake }) => {
         </div>
         <button
           type="button"
-          onClick={() => setIsEditing(!isEditing)}
-          className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1 transition"
+          onClick={() => {
+            setIsEditing(!isEditing);
+            if (!isEditing) setCustomInput(currentUrl);
+          }}
+          className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1 transition px-2 py-0.5 rounded hover:bg-slate-800"
         >
           <Settings className="w-3 h-3" />
           <span>{isEditing ? 'Cancel' : 'Change URL'}</span>
@@ -75,24 +117,38 @@ export const ServerConnectionHelper = ({ onServerAwake }) => {
       </div>
 
       {/* Target API Info */}
-      <div className="text-slate-300 space-y-1">
-        <div className="flex items-center justify-between text-[11px]">
-          <span className="text-slate-400">Current Target API:</span>
-          <span className="font-mono text-brand-300 bg-brand-500/10 px-2 py-0.5 rounded border border-brand-500/20 truncate max-w-[200px]" title={currentUrl}>
+      <div className="text-slate-300 space-y-1.5">
+        <div className="flex items-center justify-between text-[11px] gap-2">
+          <span className="text-slate-400 shrink-0">Current Target API:</span>
+          <span
+            className="font-mono text-brand-300 bg-brand-500/10 px-2 py-0.5 rounded border border-brand-500/20 truncate max-w-[260px] text-right select-all"
+            title={currentUrl}
+          >
             {currentUrl}
           </span>
         </div>
 
-        {currentUrl.includes('localhost') && typeof window !== 'undefined' && window.location.protocol === 'https:' && (
-          <p className="text-[11px] text-amber-300/90 leading-tight">
-            ⚠️ <strong>Notice:</strong> This live site is on HTTPS, but the API URL defaults to <code>localhost</code>. Set <code>VITE_API_URL</code> on Netlify or paste your backend URL below.
-          </p>
+        {/* Quick Suggestion if URL is truncated or missing .onrender.com */}
+        {suggestedOnRenderUrl && (
+          <div className="p-2 rounded-lg bg-brand-950/60 border border-brand-500/30 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 text-brand-300 text-[11px]">
+              <Sparkles className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+              <span>Suggested: <code>https://{suggestedOnRenderUrl}/api</code></span>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleSaveCustomUrl(suggestedOnRenderUrl)}
+              className="px-2 py-1 bg-brand-600 hover:bg-brand-500 text-white rounded text-[10px] font-semibold transition shrink-0"
+            >
+              Apply Fix
+            </button>
+          </div>
         )}
       </div>
 
       {/* Custom URL Input (if toggled) */}
       {isEditing && (
-        <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
+        <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-2.5">
           <label className="block text-[10px] uppercase font-bold tracking-wider text-slate-400">
             Enter Deployed Backend URL (Render / Custom)
           </label>
@@ -101,22 +157,23 @@ export const ServerConnectionHelper = ({ onServerAwake }) => {
               type="text"
               value={customInput}
               onChange={(e) => setCustomInput(e.target.value)}
-              placeholder="https://your-api.onrender.com/api"
+              placeholder="https://blockproxy-api-fc6y.onrender.com/api"
               className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 font-mono"
             />
             <button
               type="button"
-              onClick={handleSaveCustomUrl}
-              className="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-semibold transition"
+              onClick={() => handleSaveCustomUrl()}
+              className="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-semibold transition shrink-0"
             >
               Save & Test
             </button>
           </div>
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
+            <span>Examples: <code>https://blockproxy-api-fc6y.onrender.com/api</code></span>
             <button
               type="button"
               onClick={handleResetUrl}
-              className="text-[10px] text-slate-400 hover:text-rose-300 transition"
+              className="text-slate-400 hover:text-rose-300 transition underline"
             >
               Reset to Default
             </button>
@@ -152,10 +209,10 @@ export const ServerConnectionHelper = ({ onServerAwake }) => {
           type="button"
           onClick={() => handlePing()}
           disabled={isPinging}
-          className="flex-1 py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition border border-slate-700 disabled:opacity-50"
+          className="flex-1 py-2 px-3 bg-brand-600 hover:bg-brand-500 active:bg-brand-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition border border-brand-400/30 disabled:opacity-50 shadow-md"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isPinging ? 'animate-spin' : ''}`} />
-          <span>{isPinging ? 'Waking Server...' : 'Wake / Ping Backend'}</span>
+          <span>{isPinging ? `Waking Server (Attempt ${attemptCount})...` : 'Wake / Ping Backend'}</span>
         </button>
       </div>
     </div>

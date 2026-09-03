@@ -2,42 +2,67 @@ import axios from 'axios';
 
 /**
  * Format and normalize the API Base URL to handle all deployment environments:
+ * - Render blueprint service names: "blockproxy-api-fc6y" -> "https://blockproxy-api-fc6y.onrender.com/api"
  * - Bare hostnames from Render blueprints: "blockproxy-api.onrender.com" -> "https://blockproxy-api.onrender.com/api"
- * - Full URLs without /api: "https://blockproxy-api.onrender.com" -> "https://blockproxy-api.onrender.com/api"
- * - Full URLs with /api: "https://blockproxy-api.onrender.com/api" -> "https://blockproxy-api.onrender.com/api"
+ * - Full URLs without /api: "https://blockproxy-api-fc6y.onrender.com" -> "https://blockproxy-api-fc6y.onrender.com/api"
+ * - Full URLs with /api: "https://blockproxy-api-fc6y.onrender.com/api" -> "https://blockproxy-api-fc6y.onrender.com/api"
  * - Local development: "http://localhost:5000/api" -> "http://localhost:5000/api"
  */
 export const formatApiUrl = (url) => {
   if (!url || typeof url !== 'string' || !url.trim()) return 'http://localhost:5000/api';
   let formatted = url.trim();
 
-  // If no protocol is provided and it is not a relative path, default to https://
-  if (!formatted.startsWith('http://') && !formatted.startsWith('https://') && !formatted.startsWith('/')) {
-    formatted = `https://${formatted}`;
-  }
-
-  // Remove trailing slashes
+  // Strip trailing slashes first
   formatted = formatted.replace(/\/+$/, '');
 
-  // Append /api if not already present
-  if (!formatted.endsWith('/api')) {
-    formatted = `${formatted}/api`;
+  // Strip trailing /api if present so we can work with the pure domain/host
+  if (formatted.endsWith('/api')) {
+    formatted = formatted.slice(0, -4);
   }
 
-  return formatted;
+  // Remove leading protocol for hostname analysis
+  const hasHttp = formatted.startsWith('http://');
+  const hasHttps = formatted.startsWith('https://');
+  let rawHost = formatted;
+  if (hasHttp) rawHost = formatted.replace(/^http:\/\//, '');
+  if (hasHttps) rawHost = formatted.replace(/^https:\/\//, '');
+
+  // Strip any accidental trailing slashes from rawHost
+  rawHost = rawHost.replace(/\/+$/, '');
+
+  const isLocal = rawHost.startsWith('localhost') || rawHost.startsWith('127.0.0.1');
+
+  // If not local and does not contain any dot (e.g. "blockproxy-api-fc6y" or "blockproxy-api"),
+  // it is a Render blueprint internal service identifier that must be suffixed with .onrender.com
+  if (!isLocal && !rawHost.includes('.')) {
+    rawHost = `${rawHost}.onrender.com`;
+  }
+
+  // Determine protocol
+  const protocol = isLocal && (hasHttp || !hasHttps) ? 'http://' : 'https://';
+
+  return `${protocol}${rawHost}/api`;
 };
 
 export const getApiBaseUrl = () => {
   const customUrl = typeof window !== 'undefined' ? localStorage.getItem('blockproxy_custom_api_url') : null;
   const envUrl = import.meta.env.VITE_API_URL;
-  return formatApiUrl(customUrl || envUrl);
+  const effectiveUrl = formatApiUrl(customUrl || envUrl);
+
+  // If the custom URL in localStorage was formatted/repaired, keep it synced
+  if (customUrl && typeof window !== 'undefined' && customUrl !== effectiveUrl) {
+    localStorage.setItem('blockproxy_custom_api_url', effectiveUrl);
+  }
+
+  return effectiveUrl;
 };
 
 export const setCustomApiUrl = (url) => {
-  if (!url) {
+  if (!url || !url.trim()) {
     localStorage.removeItem('blockproxy_custom_api_url');
   } else {
-    localStorage.setItem('blockproxy_custom_api_url', formatApiUrl(url));
+    const formatted = formatApiUrl(url);
+    localStorage.setItem('blockproxy_custom_api_url', formatted);
   }
 };
 
